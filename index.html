@@ -1,0 +1,74 @@
+#大学の研究で使用したコードなります。（一部抜粋）
+
+
+#複数データをまとめて読み込みコード
+files_DO <- dir("フォルダ名")
+data2 <- tibble(Date=NA, DO=NA, core=NA)
+for(i in 1:length(files_DO)){
+data1 <- read_table(paste0("フォルダ名",files_DO[i]), skip=13) %>% 
+  select(1,2,4,8) %>% 
+  rename(Date=1, Time=2, DO=3, Temp=4) %>% 
+  mutate(Date=paste(Date,Time), Date=as.POSIXct(Date)) %>% 
+  summarise(Date=mean(Date),DO=mean(DO)) %>% 
+  mutate(core=str_sub(files_DO[i],1,5), time=files_DO[i])
+
+data2 <- bind_rows(data2,data1)
+}
+
+
+
+#指定した変数と月ごとに線形回帰付きの散布図を作成し保存
+var0 <- c("light","chl","weight")
+
+for(i in var0){
+  for(j in unique(date5_8$month)){
+gg <-   datesum_DO_NH %>% 
+    select(i,variable, value, month) %>% 
+    rename(exp=1) %>% 
+    filter(month==j) %>% 
+    ggplot(aes(x=exp, y=value))+
+  geom_point(size=5)+
+  facet_wrap(~variable,"light_amount", scales="free")+
+  geom_smooth(method=lm,formula=y~x,se=FALSE)+
+  theme_classic(base_size=10)+
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        title = element_text(size=40),
+        axis.text=element_text(size=40),
+        text=element_text(size=40))+
+   stat_poly_eq(formula = y ~ x,
+                      aes(label = paste("atop(",
+                                        paste(stat(eq.label),
+                                              sep = "~~~"),
+                                        ",",
+                                        paste(stat(rr.label),
+                                              sep = "~~~"),
+                                        ")",
+                                        sep = "")),
+                      parse = TRUE,size=10)+
+    labs(x=var[i])
+  ggsave(gg,file=paste("../output_fig/", i, j,"PowerPoint.png"),width=16,height=9)
+}
+}
+
+
+#箱ひげ図作成
+DO_box<-
+  boxplot %>%
+  ggplot(aes(x=month, y=`DO`,fill=light))+
+  geom_boxplot()+
+  geom_text(x = 1.0, y = 190.0, label = "***",size=15) +
+  geom_text(x = 2.0, y = -50, label = "*",size=15) +
+  geom_text(x = 3.0, y = -200, label = "**",size=15) +
+  labs(title="タイトル")+
+  xlab("月")+
+  theme_classic(base_size=10)+#背景を白色に
+theme(text = element_text(size=30),#タイトルの文字サイズ
+      axis.title.y = element_blank(),#y軸のタイトルなくす
+      axis.title.x=element_text(size=50),#x軸のタイトルの文字サイズ
+      axis.text=element_text(size=50),#軸メモリの文字サイズ
+      legend.title=element_text(size=50),#凡例タイトルの文字サイズ
+      legend.text=element_text(size=50),#凡例項目の体裁
+  scale_fill_manual(values = c('blue','red'),
+                    labels = c("暗","明"))
+ggsave(DO_box,file=paste("../output_fig/boxplot/","箱ひげ図.png"),width=16,height=9)
